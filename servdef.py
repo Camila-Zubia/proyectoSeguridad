@@ -1,6 +1,7 @@
 import socket
 import threading
 import datetime
+import ssl
 
 # =======================
 # CONFIGURACIÓN
@@ -11,8 +12,8 @@ PUERTO = 12345
 MAX_CLIENTES = 3
 
 clientes_tcp = {}  # {nombre: (socket, direccion)}
-clientes_udp = {}  # {direccion: nombre}
 credenciales = {} # {"cam": "1234"}
+
 
 # =======================
 # FUNCIONES AUXILIARES
@@ -24,18 +25,12 @@ def obtener_fecha_hora():
     ahora = datetime.datetime.now()
     return ahora.strftime('%Y-%m-%d %H:%M:%S')
 
-def enviar_a_todos(mensaje, excluir_tcp=None, excluir_udp=None):
-    """Envía mensaje a TODOS los clientes TCP y UDP, con opción de excluir alguno"""
+def enviar_a_todos(mensaje, excluir_tcp=None):
+    """Envía mensaje a TODOS los clientes TCP, con opción de excluir alguno"""
     for usuario, (sock, _) in clientes_tcp.items():
         if usuario != excluir_tcp:
             try:
                 sock.sendall(mensaje.encode())
-            except:
-                pass
-    for addr, nombre in clientes_udp.items():
-        if addr != excluir_udp:
-            try:
-                udp_socket.sendto(mensaje.encode(), addr)
             except:
                 pass
 
@@ -142,13 +137,23 @@ def manejar_cliente_tcp(sock, direccion):
 
 
 def servidor_tcp():
+    contexto_ssl = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    try:
+        contexto_ssl.load_cert_chain(certfile="server.pem", keyfile="server.pem")
+    except FileNotFoundError:
+        print("¡ERROR! No se encontró el archivo 'server.pem'. Por favor, generarlo con OpenSSL.")
+        return
+
+
     server_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_tcp.bind((IP, PUERTO))
     server_tcp.listen(MAX_CLIENTES)
+    ssl_server_tcp = contexto_ssl.wrap_socket(server_tcp, server_side=True)
+
     print(f"[TCP] Escuchando en {IP}:{PUERTO}")
 
     while True:
-        sock, addr = server_tcp.accept()
+        sock_ssl, addr = ssl_server_tcp.accept()
         if len(clientes_tcp) >= MAX_CLIENTES:
             sock.send("Servidor lleno. Intenta más tarde.".encode())
             sock.close()
@@ -158,41 +163,6 @@ def servidor_tcp():
         hilo.daemon = True
         hilo.start()
 
-# =======================
-# UDP
-# ESTE BLOQUE DE CODIGO SE ENCARGA DE ABRIR EL PUERTO UDP PARA ESCUCHAR LOS MENSAJES QUE SE ENVÍAN DESDE ESTE PROTOCOLO
-# =======================
-
-udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-def servidor_udp():
-    udp_socket.bind((IP, PUERTO))
-    print(f"[UDP] Escuchando en {IP}:{PUERTO}")
-
-    while True:
-        try:
-            data, addr = udp_socket.recvfrom(1024)
-            mensaje = data.decode().strip()
-            if mensaje == "__salir__":
-                if addr in clientes_udp:
-                    nombre = clientes_udp.pop(addr)
-                    print(f"[{obtener_fecha_hora()}] {nombre} (UDP) desconectado.")
-                    enviar_a_todos(f"[{obtener_fecha_hora()}] {nombre} ha salido del chat (UDP).", excluir_udp=addr)
-                continue
-            if addr not in clientes_udp:
-                clientes_udp[addr] = mensaje
-                bienvenida = f"{mensaje} (UDP) se unió al chat."
-                print(f"[{obtener_fecha_hora()}] {bienvenida}")
-                enviar_a_todos(f"[{obtener_fecha_hora()}] {bienvenida}", excluir_udp=addr)
-                continue
-
-            nombre = clientes_udp[addr]
-            mensaje_completo = f"[{obtener_fecha_hora()}] {nombre} (UDP): {mensaje}"
-            print(mensaje_completo)
-            enviar_a_todos(mensaje_completo, excluir_udp=addr)
-
-        except Exception as e:
-            print(f"Error en UDP: {e}")
 
 # =======================
 # CONSOLA DEL SERVIDOR
@@ -224,15 +194,6 @@ def consola_servidor():
                         print(f"❌ Error al enviar a {destino} (TCP)")
                     continue
 
-                # Buscar en clientes UDP
-                for addr, nombre in clientes_udp.items():
-                    if nombre == destino:
-                        try:
-                            udp_socket.sendto(mensaje_privado.encode(), addr)
-                            print(f"✅ Mensaje privado enviado a {destino} (UDP)")
-                        except:
-                            print(f"❌ Error al enviar a {destino} (UDP)")
-                        break
                 else:
                     print(f"⚠ Usuario '{destino}' no encontrado.")
             else:
@@ -248,18 +209,15 @@ def consola_servidor():
 
 if __name__ == "__main__":
     hilo_tcp = threading.Thread(target=servidor_tcp)
-    hilo_udp = threading.Thread(target=servidor_udp)
     hilo_admin = threading.Thread(target=consola_servidor)
 
     hilo_tcp.daemon = True
-    hilo_udp.daemon = True
     hilo_admin.daemon = True
 
     hilo_tcp.start()
-    hilo_udp.start()
     hilo_admin.start()
 
-    print("Servidor de chat listo. Esperando conexiones TCP y UDP...")
+    print("Servidor de chat listo. Esperando conexiones TCP")
 
     try:
         while True:

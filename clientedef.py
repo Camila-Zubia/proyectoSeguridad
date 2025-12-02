@@ -86,44 +86,6 @@ def cliente_tcp():
         cliente.close()
         main()
 
-# ===========================
-# CLIENTE UDP
-# MANEJA LA CONEXIÓN AL SERVIDOR CUANDO SE USA EL PROTOCOLO UDP
-# ===========================
-
-def cliente_udp():
-    cliente = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    cliente.settimeout(1.0)
-
-    nombre = input("Ingresa tu nombre de usuario: ")
-    cliente.sendto(nombre.encode(), (IP_SERVIDOR, PUERTO))
-
-    # Breve espera inicial para permitir recibir el mensaje de bienvenida
-    import time
-    time.sleep(0.5)
-
-    def recibir():
-        while True:
-            try:
-                datos, _ = cliente.recvfrom(1024)
-                print(datos.decode())
-            except socket.timeout:
-                continue
-            except:
-                break
-
-    hilo_recv = threading.Thread(target=recibir)
-    hilo_recv.daemon = True
-    hilo_recv.start()
-
-    while True:
-        mensaje = input()
-        if mensaje.lower() == 'salir':
-            cliente.sendto("__salir__".encode(), (IP_SERVIDOR, PUERTO))
-            break
-        cliente.sendto(mensaje.encode(), (IP_SERVIDOR, PUERTO))
-    cliente.close()
-    main()
 
 # ===========================
 # MENÚ PRINCIPAL
@@ -131,17 +93,8 @@ def cliente_udp():
 # ===========================
 
 def main():
-    print("Cliente de Chat - Elige protocolo:")
-    print("1. TCP")
-    print("2. UDP")
-    opcion = input("Selecciona (1/2): ").strip()
 
-    if opcion == '1':
-        cliente_tcp()
-    elif opcion == '2':
-        cliente_udp()
-    else:
-        print("Opción inválida. Finalizando.")
+    cliente_tcp()
 
 if __name__ == "__main__":
     main()
