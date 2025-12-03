@@ -1,0 +1,95 @@
+2025-12-02 21:59:02 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 21:59:29 - INFO - Nuevo usuario registrado: cam
+2025-12-02 21:59:29 - INFO - Usuario cam conectado desde ('127.0.0.1', 60247)
+2025-12-02 21:59:32 - INFO - Mensaje PUBLICO de cam: hola
+2025-12-02 21:59:40 - INFO - Servidor envió mensaje PUBLICO: hola cam
+2025-12-02 21:59:51 - INFO - Mensaje PUBLICO de cam: hola server
+2025-12-02 22:01:42 - ERROR - Error en manejo de cliente ('127.0.0.1', 60247): [WinError 10054] Se ha forzado la interrupción de una conexión existente por el host remoto
+2025-12-02 22:01:42 - INFO - Usuario cam desconectado.
+2025-12-02 22:03:50 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 22:04:06 - INFO - Login exitoso para usuario: cam
+2025-12-02 22:04:06 - INFO - Usuario cam conectado desde ('127.0.0.1', 49999)
+2025-12-02 22:04:17 - INFO - Mensaje PUBLICO de cam: hola
+2025-12-02 22:04:31 - INFO - Mensaje PUBLICO de cam: hola server
+2025-12-02 22:04:40 - INFO - Servidor envió mensaje PUBLICO: holas
+2025-12-02 22:05:01 - ERROR - Error en manejo de cliente ('127.0.0.1', 49999): [WinError 10054] Se ha forzado la interrupción de una conexión existente por el host remoto
+2025-12-02 22:05:01 - INFO - Usuario cam desconectado.
+2025-12-02 22:10:47 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 22:11:04 - INFO - Login exitoso para usuario: cam
+2025-12-02 22:11:04 - INFO - Usuario cam conectado desde ('127.0.0.1', 64968)
+2025-12-02 22:11:11 - INFO - Servidor envió mensaje PUBLICO: hols
+2025-12-02 22:11:18 - INFO - Mensaje PUBLICO de cam: hola
+2025-12-02 22:11:33 - ERROR - Error en manejo de cliente ('127.0.0.1', 64968): [WinError 10054] Se ha forzado la interrupción de una conexión existente por el host remoto
+2025-12-02 22:11:33 - INFO - Usuario cam desconectado.
+2025-12-02 22:20:31 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 22:20:53 - INFO - Login exitoso para usuario: cam
+2025-12-02 22:20:53 - INFO - Usuario cam conectado desde ('127.0.0.1', 61716)
+2025-12-02 22:20:59 - INFO - Mensaje PUBLICO de cam: hola
+2025-12-02 22:21:07 - INFO - Servidor envió mensaje PUBLICO: hola
+2025-12-02 22:21:17 - ERROR - Error en manejo de cliente ('127.0.0.1', 55875): [WinError 10054] Se ha forzado la interrupción de una conexión existente por el host remoto
+2025-12-02 22:21:39 - INFO - Servidor envió mensaje PUBLICO: hola
+2025-12-02 22:23:46 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 22:24:21 - INFO - Nuevo usuario registrado: cam
+2025-12-02 22:24:21 - INFO - Usuario cam conectado desde ('127.0.0.1', 49911)
+2025-12-02 22:24:29 - INFO - Servidor envió mensaje PUBLICO: hola cam
+2025-12-02 22:24:37 - INFO - Mensaje PUBLICO de cam: hola server
+2025-12-02 22:24:51 - ERROR - Error en manejo de cliente ('127.0.0.1', 49911): [WinError 10054] Se ha forzado la interrupción de una conexión existente por el host remoto
+2025-12-02 22:24:51 - INFO - Usuario cam desconectado.
+2025-12-02 22:33:48 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 22:33:48 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 22:33:57 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 63272): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 22:36:18 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 22:36:18 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 22:36:33 - ERROR - Error en manejo de cliente ('127.0.0.1', 49792): name 'credenciales' is not defined
+2025-12-02 22:36:54 - ERROR - Error en manejo de cliente ('127.0.0.1', 59674): name 'credenciales' is not defined
+2025-12-02 22:38:05 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 22:38:05 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 22:38:16 - ERROR - Error en manejo de cliente ('127.0.0.1', 56853): name 'credenciales' is not defined
+2025-12-02 22:52:55 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 22:52:55 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 22:53:03 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 52326): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 22:54:40 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 49482): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 23:01:48 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:01:48 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:01:56 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 53491): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 23:05:24 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:05:24 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:05:33 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 65432): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 23:05:59 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 65467): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 23:06:49 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:06:49 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:06:55 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 65530): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 23:10:24 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:10:24 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:10:30 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 59112): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 23:14:18 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:14:18 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:14:25 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 57089): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 23:15:14 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:15:14 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:15:48 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:15:48 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:15:56 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 57165): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 23:17:17 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:17:17 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:17:27 - ERROR - Error en manejo de cliente ('127.0.0.1', 60938): name 'credenciales' is not defined
+2025-12-02 23:23:56 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:23:56 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:24:01 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 53962): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 23:28:08 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:28:08 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:28:18 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 64310): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 23:31:00 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:31:00 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:31:05 - ERROR - Error SSL al establecer conexión con ('127.0.0.1', 62301): [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1028)
+2025-12-02 23:39:23 - WARNING - Archivo de credenciales no encontrado. Iniciando con diccionario vacío.
+2025-12-02 23:39:23 - INFO - Servidor TCP iniciado en localhost:12345. Máx clientes: 5
+2025-12-02 23:39:41 - INFO - Credenciales guardadas en el archivo.
+2025-12-02 23:39:41 - INFO - Nuevo usuario registrado: cam
+2025-12-02 23:39:41 - INFO - Usuario cam conectado desde ('127.0.0.1', 54261)
+2025-12-02 23:39:45 - INFO - Mensaje PUBLICO de cam: hola server
+2025-12-02 23:39:51 - INFO - Servidor envió mensaje PUBLICO: hola
+2025-12-02 23:39:58 - INFO - Mensaje PUBLICO de cam: que onda
+2025-12-02 23:40:05 - INFO - Servidor envió mensaje PUBLICO: nada todo bien
+2025-12-02 23:40:11 - ERROR - Error en manejo de cliente ('127.0.0.1', 54261): [WinError 10054] Se ha forzado la interrupción de una conexión existente por el host remoto
+2025-12-02 23:40:11 - INFO - Usuario cam desconectado.

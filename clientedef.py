@@ -1,6 +1,7 @@
 import socket
 import threading
 import datetime
+import ssl
 
 # ===========================
 # CONFIGURACIÓN INICIAL
@@ -19,44 +20,46 @@ def obtener_fecha_hora():
 # ===========================
 
 def cliente_tcp():
-    cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    contexto_ssl = ssl.create_default_context()
     try:
-        cliente.connect((IP_SERVIDOR, PUERTO))
-
+        contexto_ssl.load_verify_locations(cafile="server.pem")
+    except FileNotFoundError:
+        print("¡ERROR! No se encontró el archivo 'server.pem' para la validación.")
+        return
+    contexto_ssl.check_hostname = False
+    contexto_ssl.verify_mode = ssl.CERT_REQUIRED
+    cliente_normal = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    cliente = None
+    try:
+        cliente_normal.connect((IP_SERVIDOR, PUERTO))
+        cliente = contexto_ssl.wrap_socket(cliente_normal, server_hostname=IP_SERVIDOR)
         prompt_opcion = cliente.recv(1024).decode()
         print(prompt_opcion, end='')
         opcion = input()
         cliente.send(opcion.encode())
 
         if opcion == '1' or opcion == '2':
-            # 2. Recibe el prompt para nombre
             prompt_nombre = cliente.recv(1024).decode()
             print(prompt_nombre, end='')
             nombre = input()
             cliente.send(nombre.encode())
 
-            # 3. Recibe el prompt para contraseña
             prompt_pass = cliente.recv(1024).decode()
             print(prompt_pass, end='')
             contraseña = input()
             cliente.send(contraseña.encode())
 
-            # 4. Recibe el mensaje de éxito/error (Bienvenido, Usuario no encontrado, etc.)
             respuesta_servidor = cliente.recv(1024).decode()
             print(respuesta_servidor)
 
-            # Si el servidor no envía un mensaje de "Bienvenido", asume que hubo un error y termina
             if not ("Bienvenido" in respuesta_servidor or "exitoso" in respuesta_servidor):
                 cliente.close()
-                main()
-                return  # Termina la ejecución si la autenticación falla
+                return
 
         else:
-            # Opción inválida manejada por el servidor, recibir su mensaje final y terminar
             respuesta_servidor = cliente.recv(1024).decode()
             print(respuesta_servidor)
             cliente.close()
-            main()
             return
 
         def recibir():
@@ -64,9 +67,14 @@ def cliente_tcp():
                 try:
                     datos = cliente.recv(1024).decode()
                     if not datos:
+                        print("\nEl servidor ha cerrado la conexión.")
                         break
-                    print(datos)
-                except:
+                    print(datos, end='')
+                except (ConnectionResetError, ssl.SSLError, socket.error):
+                    print("\nConexión perdida con el servidor.")
+                    break
+                except Exception as e:
+                    print(f"\nError de recepción: {e}")
                     break
 
         hilo_recv = threading.Thread(target=recibir)
@@ -78,13 +86,19 @@ def cliente_tcp():
             if mensaje.lower() == 'salir':
                 cliente.send("__salir__".encode())
                 break
+
+            if not mensaje.strip():
+                print("El mensaje no puede estar vacío.")
+                continue
             cliente.send(mensaje.encode())
 
+    except ssl.SSLError as e:
+        print(f"Error SSL al conectar: {e}")
     except Exception as e:
         print(f"Error en conexión TCP: {e}")
     finally:
-        cliente.close()
-        main()
+        if cliente:
+            cliente.close()
 
 
 # ===========================
@@ -93,8 +107,20 @@ def cliente_tcp():
 # ===========================
 
 def main():
+    while True:
+        print("\n--- Menú de Cliente ---")
+        print("1. Conectar al Chat")
+        print("2. Salir")
 
-    cliente_tcp()
+        choice = input("Elige una opción: ")
+
+        if choice == '1':
+            cliente_tcp()
+        elif choice == '2':
+            print("Saliendo del programa.")
+            break
+        else:
+            print("Opción no válida. Intenta de nuevo.")
 
 if __name__ == "__main__":
     main()

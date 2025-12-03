@@ -2,23 +2,35 @@ import socket
 import threading
 import datetime
 import ssl
+import logging
+import bcrypt
+import json
 
 # =======================
-# CONFIGURACIÓN
-# ESTE BLOQUE DE CÓDIGO CONTIENE LA IP Y EL PUERTO ASÍ COMO UNA LISTA QUE CONTIENE LOS CLIENTES CONECTADOS AL SERVIDOR
+# CONFIGURACIÓN DEL LOGGING
+# =======================
+logging.basicConfig(
+    filename='chat_log.txt',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    filemode='a'
+)
+logger = logging.getLogger()
+
+# =======================
+# CONFIGURACIÓN DEL SERVIDOR
 # =======================
 IP = 'localhost'
 PUERTO = 12345
-MAX_CLIENTES = 3
+MAX_CLIENTES = 5
 
-clientes_tcp = {}  # {nombre: (socket, direccion)}
-credenciales = {} # {"cam": "1234"}
-
+clientes_tcp = {}
+ARCHIVO_CREDENCIALES = 'credenciales.json'
+credenciales = {}
 
 # =======================
 # FUNCIONES AUXILIARES
-# EN ESTE BLOQUE DE CÓDIGO HAY 2 FUNCIONES: LA PRIMERA SE ENCARGA DE OBTENER LA FECHA Y HORA DEL SISTEMA Y FORMATEARLA
-# Y LA SEGUNDA SE ENCARGA DE MANEJAR LA OPCIÓN DE MANDAR MENSAJE DESDE EL SERVIDOR CON LA OPCIÓN DE EXPLUIR ALGUN USUARIO
 # =======================
 
 def obtener_fecha_hora():
@@ -32,79 +44,115 @@ def enviar_a_todos(mensaje, excluir_tcp=None):
             try:
                 sock.sendall(mensaje.encode())
             except:
+                logger.warning(f"Error al enviar mensaje a {usuario}. Socket inválido.")
                 pass
 
+def cargar_credenciales():
+    global credenciales
+    try:
+        with open(ARCHIVO_CREDENCIALES, 'r') as f:
+            credenciales = json.load(f)
+            logger.info("Credenciales cargadas desde el archivo.")
+    except FileNotFoundError:
+        logger.warning("Archivo de credenciales no encontrado. Iniciando con diccionario vacío.")
+    except json.JSONDecodeError:
+        logger.error("Error al leer el archivo de credenciales. Asegúrate de que no esté corrupto.")
+
+def guardar_credenciales():
+    try:
+        with open(ARCHIVO_CREDENCIALES, 'w') as f:
+            json.dump(credenciales, f)
+            logger.info("Credenciales guardadas en el archivo.")
+    except Exception as e:
+        logger.error(f"Fallo al guardar credenciales: {e}")
+
 # =======================
-# TCP
-# ESTE BLOQUE DE CÓDIGO CONTIENE DOS FUNCIONES: LA PRIMERA QUE SE ENCARGA DE LA MENSAJERIA DE LOS CLIENTES PUESTOS EN TCP DONDE SE RECIBE EL USUARIO, LO INGRESA Y
-# ESPERA MAS MENSAJES 
-# LA SEGUNDA SE ENCARGA DE ABRIR EL PUERTO Y ESCUCHAR LOS MENSAJES ENTRANTES
+# MANEJO DE CLIENTES
 # =======================
 
-def manejar_cliente_tcp(sock, direccion):
+def manejar_cliente_tcp(sock_ssl, direccion):
+    global credenciales
     nombre = None
     try:
-        sock.send("Bienvenido! Elige una opción (1 = Login, 2 = Registrarse): ".encode())
-        opcion = sock.recv(1024).decode().strip()
+        sock_ssl.send("Bienvenido! Elige una opción (1 = Login, 2 = Registrarse): ".encode())
+        opcion = sock_ssl.recv(1024).decode().strip()
 
         if opcion == '2':
-            sock.send("Ingresa tu nombre de usuario: ".encode())
-            nombre = sock.recv(1024).decode().strip()
-            if nombre in clientes_tcp or nombre in [n for n, (s,a) in clientes_tcp.items()]:
-                sock.send("Este nombre ya está en uso o conectado. Conexión terminada.".encode())
-                sock.close()
+            sock_ssl.send("Ingresa tu nombre de usuario: ".encode())
+            nombre = sock_ssl.recv(1024).decode().strip()
+            if not nombre.isalnum() or len(nombre) < 3:
+                sock_ssl.send("Nombre inválido: solo alfanuméricos (mínimo 3 caracteres). Conexión terminada.".encode())
+                sock_ssl.close()
+                return
+
+            if nombre in clientes_tcp:
+                sock_ssl.send("Este nombre ya está conectado. Conexión terminada.".encode())
+                sock_ssl.close()
                 return
             if nombre in credenciales:
-                sock.send("Este usuario ya existe. Conexión terminada.".encode())
-                sock.close()
+                sock_ssl.send("Este usuario ya existe. Conexión terminada.".encode())
+                sock_ssl.close()
                 return
 
-            sock.send("Ingresa tu contraseña: ".encode())
-            contraseña = sock.recv(1024).decode().strip()
+            sock_ssl.send("Ingresa tu contraseña: ".encode())
+            contraseña = sock_ssl.recv(1024).decode().strip()
 
             if len(contraseña) < 4:
-                sock.send("La contraseña debe tener al menos 4 caracteres. Conexión terminada.".encode())
-                sock.close()
+                sock_ssl.send("La contraseña debe tener al menos 4 caracteres. Conexión terminada.".encode())
+                sock_ssl.close()
                 return
 
-            credenciales[nombre] = contraseña
-            sock.send(f"Registro exitoso, ¡Bienvenido {nombre}!\n".encode())
+            contraseña_bytes = contraseña.encode('utf-8')
+            hash_contraseña = bcrypt.hashpw(contraseña_bytes, bcrypt.gensalt()).decode('utf-8')
 
-        elif opcion == '1':  # Login
-            sock.send("Ingresa tu nombre de usuario: ".encode())
-            nombre = sock.recv(1024).decode().strip()
+            credenciales[nombre] = hash_contraseña
+            guardar_credenciales()
+            logger.info(f"Nuevo usuario registrado: {nombre}")
 
-            if nombre in clientes_tcp or nombre in [n for n, (s, a) in clientes_tcp.items()]:
-                sock.send("Este nombre ya está conectado. Conexión terminada.".encode())
-                sock.close()
+            sock_ssl.send(f"Registro exitoso, ¡Bienvenido {nombre}!\n".encode())
+
+        elif opcion == '1':
+            sock_ssl.send("Ingresa tu nombre de usuario: ".encode())
+            nombre = sock_ssl.recv(1024).decode().strip()
+
+            if nombre in clientes_tcp:
+                sock_ssl.send("Este nombre ya está conectado. Conexión terminada.".encode())
+                sock_ssl.close()
                 return
 
             if nombre not in credenciales:
-                sock.send("Usuario no encontrado. Conexión terminada.".encode())
-                sock.close()
+                sock_ssl.send("Usuario no encontrado. Conexión terminada.".encode())
+                sock_ssl.close()
                 return
 
-            sock.send("Ingresa tu contraseña: ".encode())
-            contraseña = sock.recv(1024).decode().strip()
+            sock_ssl.send("Ingresa tu contraseña: ".encode())
+            contraseña = sock_ssl.recv(1024).decode().strip()
 
-            if credenciales.get(nombre) != contraseña:
-                sock.send("Contraseña incorrecta. Conexión terminada.".encode())
-                sock.close()
+            contraseña_ingresada_bytes = contraseña.encode('utf-8')
+            hash_almacenado_bytes = credenciales.get(nombre).encode('utf-8')
+
+            if not bcrypt.checkpw(contraseña_ingresada_bytes, hash_almacenado_bytes):
+                sock_ssl.send("Contraseña incorrecta. Conexión terminada.".encode())
+                sock_ssl.close()
                 return
 
-            sock.send(f"Login exitoso, ¡Bienvenido {nombre}!\n".encode())
+            sock_ssl.send(f"Login exitoso, ¡Bienvenido {nombre}!\n".encode())
+            logger.info(f"Login exitoso para usuario: {nombre}")
 
-        else:  # Opción inválida
-            sock.send("Opción inválida. Conexión terminada.".encode())
-            sock.close()
+
+        else:
+            sock_ssl.send("Opción inválida. Conexión terminada.".encode())
+            sock_ssl.close()
+            logger.warning(f"Conexión de {direccion} terminó por opción inválida.")
             return
 
-        clientes_tcp[nombre] = (sock, direccion)
+        clientes_tcp[nombre] = (sock_ssl, direccion)
+        logger.info(f"Usuario {nombre} conectado desde {direccion}")
         print(f"[{obtener_fecha_hora()}] {nombre} (TCP) conectado desde {direccion}")
-        enviar_a_todos(f"[{obtener_fecha_hora()}] {nombre} se unió al chat (TCP)\n", excluir_tcp=nombre)
+        enviar_a_todos(f"[{obtener_fecha_hora()}] {nombre} se unió al chat.\n", excluir_tcp=nombre)
 
         while True:
-            mensaje = sock.recv(1024).decode()
+            mensaje = sock_ssl.recv(1024).decode()
             if not mensaje:
                 break
             if mensaje == "__salir__":
@@ -115,73 +163,114 @@ def manejar_cliente_tcp(sock, direccion):
                 if len(partes) == 2:
                     destino, contenido = partes
                     destino = destino[1:]
+                    mensaje_privado = f"[{obtener_fecha_hora()}] [Privado] {nombre}: {contenido}\n"
+
                     if destino in clientes_tcp:
-                        clientes_tcp[destino][0].sendall(f"[{obtener_fecha_hora()}] [Privado] {nombre}: {contenido}\n".encode())
+                        clientes_tcp[destino][0].sendall(mensaje_privado.encode())
+                        sock_ssl.send(f"✅ Mensaje privado enviado a {destino}.\n".encode())
+                        logger.info(f"Mensaje PRIVADO de {nombre} a {destino}: {contenido}")
                     else:
-                        sock.send(f"Usuario {destino} no encontrado.\n".encode())
+                        sock_ssl.send(f"Usuario {destino} no encontrado.\n".encode())
+                        logger.warning(f"Intento de mensaje privado de {nombre} a usuario no encontrado: {destino}")
                 else:
-                    sock.send("Formato incorrecto. Usa: @usuario mensaje\n".encode())
+                    sock_ssl.send("Formato incorrecto. Usa: @usuario mensaje\n".encode())
+                    logger.warning(f"Mensaje de {nombre} con formato privado incorrecto.")
             else:
-                mensaje_completo = f"[{obtener_fecha_hora()}] {nombre} (TCP): {mensaje}"
+                mensaje_completo = f"[{obtener_fecha_hora()}] {nombre}: {mensaje}\n"
+                logger.info(f"Mensaje PUBLICO de {nombre}: {mensaje}")
                 print(mensaje_completo)
                 enviar_a_todos(mensaje_completo, excluir_tcp=nombre)
 
-    except Exception as e:
+    except ssl.SSLError as e:
+        logger.error(f"Error SSL con cliente {direccion}: {e}")
         print(f"Error con {direccion} (TCP): {e}")
+    except Exception as e:
+        logger.error(f"Error en manejo de cliente {direccion}: {e}")
     finally:
-        sock.close()
         if nombre in clientes_tcp:
             del clientes_tcp[nombre]
+            logger.info(f"Usuario {nombre} desconectado.")
             print(f"[{obtener_fecha_hora()}] {nombre} (TCP) desconectado.")
-            enviar_a_todos(f"[{obtener_fecha_hora()}] {nombre} ha salido del chat (TCP).\n")
+            enviar_a_todos(f"[{obtener_fecha_hora()}] {nombre} ha salido del chat.\n")
+
+        try:
+            sock_ssl.close()
+        except:
+            pass
 
 
 def servidor_tcp():
-    contexto_ssl = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    cargar_credenciales()
+    contexto_ssl = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    contexto_ssl.set_ciphers('DEFAULT')
+
     try:
         contexto_ssl.load_cert_chain(certfile="server.pem", keyfile="server.pem")
     except FileNotFoundError:
         print("¡ERROR! No se encontró el archivo 'server.pem'. Por favor, generarlo con OpenSSL.")
+        logger.critical("No se encontró el archivo 'server.pem'. Servidor no iniciado.")
         return
 
-
     server_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_tcp.bind((IP, PUERTO))
-    server_tcp.listen(MAX_CLIENTES)
-    ssl_server_tcp = contexto_ssl.wrap_socket(server_tcp, server_side=True)
+    server_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        server_tcp.bind((IP, PUERTO))
+        server_tcp.listen(MAX_CLIENTES)
+    except Exception as e:
+        print(f"Error al iniciar el servidor: {e}")
+        logger.critical(f"Fallo al iniciar el servidor en {IP}:{PUERTO}: {e}")
+        return
 
     print(f"[TCP] Escuchando en {IP}:{PUERTO}")
+    logger.info(f"Servidor TCP iniciado en {IP}:{PUERTO}. Máx clientes: {MAX_CLIENTES}")
 
     while True:
-        sock_ssl, addr = ssl_server_tcp.accept()
+        sock, addr = server_tcp.accept()
+
         if len(clientes_tcp) >= MAX_CLIENTES:
-            sock.send("Servidor lleno. Intenta más tarde.".encode())
-            sock.close()
+            try:
+                sock_ssl_temp = contexto_ssl.wrap_socket(sock, server_side=True)
+                sock_ssl_temp.send("Servidor lleno. Intenta más tarde.".encode())
+                sock_ssl_temp.close()
+                logger.warning(f"Conexión rechazada de {addr}. Límite de {MAX_CLIENTES} alcanzado.")
+            except:
+                sock.close()
             continue
 
-        hilo = threading.Thread(target=manejar_cliente_tcp, args=(sock, addr))
-        hilo.daemon = True
-        hilo.start()
+        try:
+            sock_ssl = contexto_ssl.wrap_socket(sock, server_side=True)
+            hilo = threading.Thread(target=manejar_cliente_tcp, args=(sock_ssl, addr))
+            hilo.daemon = True
+            hilo.start()
+        except ssl.SSLError as e:
+            logger.error(f"Error SSL al establecer conexión con {addr}: {e}")
+            sock.close()
 
 
 # =======================
 # CONSOLA DEL SERVIDOR
-# MANEJA LA ENTRADA DE MENSAJES DEL SERVIDOR PARA EVITAR UNA SOBREPOSICIÓN DE LOS MENSAJES 
 # =======================
 
 def consola_servidor():
     """Permite al servidor enviar mensajes a todos o a uno en específico"""
     print("Puedes escribir mensajes como servidor. Usa '@usuario mensaje' para mensaje privado y 'salir' para cerrar el chat.")
     while True:
-        mensaje = input()
+        try:
+            mensaje = input()
+        except EOFError:
+            break
+        except KeyboardInterrupt:
+            break
+
         if mensaje.lower() == 'salir':
             print("Servidor detenido.")
+            logger.critical("Servidor finalizado por comando 'salir' en consola.")
             exit(0)
 
         if mensaje.startswith('@'):
             partes = mensaje.split(' ', 1)
             if len(partes) == 2:
-                destino = partes[0][1:]  # sin @
+                destino = partes[0][1:]
                 contenido = partes[1]
                 mensaje_privado = f"[{obtener_fecha_hora()}] [Privado del Servidor]: {contenido}"
 
@@ -189,22 +278,23 @@ def consola_servidor():
                 if destino in clientes_tcp:
                     try:
                         clientes_tcp[destino][0].sendall(mensaje_privado.encode())
-                        print(f"✅ Mensaje privado enviado a {destino} (TCP)")
+                        print(f"✅ Mensaje privado enviado a {destino}")
+                        logger.info(f"Servidor envió mensaje PRIVADO a {destino}: {contenido}")
                     except:
-                        print(f"❌ Error al enviar a {destino} (TCP)")
-                    continue
-
+                        print(f"❌ Error al enviar a {destino}. Se desconectó.")
+                        logger.warning(f"Error al enviar mensaje privado del Servidor a {destino}.")
                 else:
                     print(f"⚠ Usuario '{destino}' no encontrado.")
             else:
                 print("Formato incorrecto. Usa: @usuario mensaje")
         else:
-            mensaje_servidor = f"[{obtener_fecha_hora()}] Servidor: {mensaje}"
+            mensaje_servidor = f"[{obtener_fecha_hora()}] Servidor: {mensaje}\n"
             enviar_a_todos(mensaje_servidor)
+            logger.info(f"Servidor envió mensaje PUBLICO: {mensaje}")
+
 
 # =======================
-# INICIO
-# MANEJA TODOS LOS HILOS
+# INICIO DEL SERVIDOR
 # =======================
 
 if __name__ == "__main__":
@@ -217,10 +307,10 @@ if __name__ == "__main__":
     hilo_tcp.start()
     hilo_admin.start()
 
-    print("Servidor de chat listo. Esperando conexiones TCP")
+    print("Servidor de chat listo. Esperando conexiones TCP/SSL")
 
     try:
         while True:
-            pass
-    except KeyboardInterrupt:
+            threading.Event().wait()
+    except (KeyboardInterrupt, SystemExit):
         print("Servidor finalizado.")
