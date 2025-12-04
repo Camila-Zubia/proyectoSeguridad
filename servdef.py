@@ -23,7 +23,7 @@ logger = logging.getLogger()
 # =======================
 IP = 'localhost'
 PUERTO = 12345
-MAX_CLIENTES = 5
+MAX_CLIENTES = 2
 
 clientes_tcp = {}
 ARCHIVO_CREDENCIALES = 'credenciales.json'

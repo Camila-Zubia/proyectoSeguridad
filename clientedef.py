@@ -2,6 +2,7 @@ import socket
 import threading
 import datetime
 import ssl
+import getpass
 
 # ===========================
 # CONFIGURACIÓN INICIAL
@@ -42,12 +43,18 @@ def cliente_tcp():
             prompt_nombre = cliente.recv(1024).decode()
             print(prompt_nombre, end='')
             nombre = input()
-            cliente.send(nombre.encode())
+            nombre_sanitizado = nombre.strip()
+            cliente.send(nombre_sanitizado.encode())
 
-            prompt_pass = cliente.recv(1024).decode()
-            print(prompt_pass, end='')
-            contraseña = input()
-            cliente.send(contraseña.encode())
+            #prompt_pass = cliente.recv(1024).decode()
+            #print(prompt_pass, end='')
+            #contraseña = input()
+            #contraseña_sanitizada = contraseña.strip()
+            prompt_pass_raw = cliente.recv(1024).decode()
+            prompt_pass = prompt_pass_raw.strip()
+            contraseña = getpass.getpass(prompt_pass + " ")
+            contraseña_sanitizada = contraseña.strip()
+            cliente.send(contraseña_sanitizada.encode())
 
             respuesta_servidor = cliente.recv(1024).decode()
             print(respuesta_servidor)
@@ -82,15 +89,23 @@ def cliente_tcp():
         hilo_recv.start()
 
         while True:
-            mensaje = input()
-            if mensaje.lower() == 'salir':
+            mensaje_entrada = input()
+            mensaje_sanitizado = mensaje_entrada.strip()
+            if mensaje_sanitizado.lower() == 'salir':
                 cliente.send("__salir__".encode())
                 break
 
-            if not mensaje.strip():
+            if not mensaje_sanitizado:
                 print("El mensaje no puede estar vacío.")
                 continue
-            cliente.send(mensaje.encode())
+
+            if mensaje_sanitizado.startswith('@'):
+                partes = mensaje_sanitizado.split(' ', 1)
+                if len(partes) < 2 or not partes[0][1:].strip() or not partes[1].strip():
+                    print("Formato de mensaje privado incorrecto. Usa: @usuario mensaje_aqui")
+                    continue
+
+            cliente.send(mensaje_sanitizado.encode())
 
     except ssl.SSLError as e:
         print(f"Error SSL al conectar: {e}")
