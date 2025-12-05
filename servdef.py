@@ -48,6 +48,7 @@ def enviar_a_todos(mensaje, excluir_tcp=None):
                 pass
 
 def cargar_credenciales():
+    """Carga las credenciales desde el archivo credenciales.json"""
     global credenciales
     try:
         with open(ARCHIVO_CREDENCIALES, 'r') as f:
@@ -71,6 +72,9 @@ def guardar_credenciales():
 # =======================
 
 def manejar_cliente_tcp(sock_ssl, direccion):
+    """Metodo que permite el manejo de los clientes, desde su registro, login y envío de mensajes"""
+    """Esta primera sección está dedicada al login y registro de usuarios, garantizar una contraseña segura y
+       un nombre de usuario unico"""
     global credenciales
     nombre = None
     try:
@@ -151,6 +155,7 @@ def manejar_cliente_tcp(sock_ssl, direccion):
         print(f"[{obtener_fecha_hora()}] {nombre} (TCP) conectado desde {direccion}")
         enviar_a_todos(f"[{obtener_fecha_hora()}] {nombre} se unió al chat.\n", excluir_tcp=nombre)
 
+        """Una vez el usuario se haya registrado, esta parte es exclusiva a los mensajes que manda"""
         while True:
             mensaje = sock_ssl.recv(1024).decode()
             if not mensaje:
@@ -167,7 +172,7 @@ def manejar_cliente_tcp(sock_ssl, direccion):
 
                     if destino in clientes_tcp:
                         clientes_tcp[destino][0].sendall(mensaje_privado.encode())
-                        sock_ssl.send(f"✅ Mensaje privado enviado a {destino}.\n".encode())
+                        sock_ssl.send(f"Mensaje privado enviado a {destino}.\n".encode())
                         logger.info(f"Mensaje PRIVADO de {nombre} a {destino}: {contenido}")
                     else:
                         sock_ssl.send(f"Usuario {destino} no encontrado.\n".encode())
@@ -200,6 +205,7 @@ def manejar_cliente_tcp(sock_ssl, direccion):
 
 
 def servidor_tcp():
+    """Este metodo es el que inicia el servidor en TCP"""
     cargar_credenciales()
     contexto_ssl = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     contexto_ssl.set_ciphers('DEFAULT')
@@ -252,7 +258,9 @@ def servidor_tcp():
 # =======================
 
 def consola_servidor():
-    """Permite al servidor enviar mensajes a todos o a uno en específico"""
+    """Permite al servidor enviar mensajes a todos los usuarios o a uno en específico"""
+    """Tambien permite leer los mensajes tanto publicos y privados de los usuarios"""
+    
     print("Puedes escribir mensajes como servidor. Usa '@usuario mensaje' para mensaje privado y 'salir' para cerrar el chat.")
     while True:
         try:
@@ -278,13 +286,13 @@ def consola_servidor():
                 if destino in clientes_tcp:
                     try:
                         clientes_tcp[destino][0].sendall(mensaje_privado.encode())
-                        print(f"✅ Mensaje privado enviado a {destino}")
+                        print(f"Mensaje privado enviado a {destino}")
                         logger.info(f"Servidor envió mensaje PRIVADO a {destino}: {contenido}")
                     except:
-                        print(f"❌ Error al enviar a {destino}. Se desconectó.")
+                        print(f"Error al enviar a {destino}. Probablemente se desconectó.")
                         logger.warning(f"Error al enviar mensaje privado del Servidor a {destino}.")
                 else:
-                    print(f"⚠ Usuario '{destino}' no encontrado.")
+                    print(f"Usuario '{destino}' no encontrado.")
             else:
                 print("Formato incorrecto. Usa: @usuario mensaje")
         else:
@@ -313,4 +321,5 @@ if __name__ == "__main__":
         while True:
             threading.Event().wait()
     except (KeyboardInterrupt, SystemExit):
+
         print("Servidor finalizado.")
