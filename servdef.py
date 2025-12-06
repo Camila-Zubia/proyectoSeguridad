@@ -25,6 +25,7 @@ IP = 'localhost'
 PUERTO = 12345
 MAX_CLIENTES = 2
 
+# Diccionario para guardar la sesion de los usuarios
 clientes_tcp = {}
 ARCHIVO_CREDENCIALES = 'credenciales.json'
 credenciales = {}
@@ -34,11 +35,15 @@ credenciales = {}
 # =======================
 
 def obtener_fecha_hora():
+    """Regresa la fecha y hora actual para estamparla en los mensajes del chat """
     ahora = datetime.datetime.now()
     return ahora.strftime('%Y-%m-%d %H:%M:%S')
 
 def enviar_a_todos(mensaje, excluir_tcp=None):
-    """Envía mensaje a TODOS los clientes TCP, con opción de excluir alguno"""
+    """Envía mensaje a TODOS los clientes TCP, con opción de excluir alguno
+    :param mensaje: El texto a enviar
+    :param excluir_tcp:Nombre del usuario a excluir. Nadie por defecto.
+    """
     for usuario, (sock, _) in clientes_tcp.items():
         if usuario != excluir_tcp:
             try:
@@ -60,6 +65,7 @@ def cargar_credenciales():
         logger.error("Error al leer el archivo de credenciales. Asegúrate de que no esté corrupto.")
 
 def guardar_credenciales():
+    """Escribe el diccionario actual de credenciales en el archivo JSON."""
     try:
         with open(ARCHIVO_CREDENCIALES, 'w') as f:
             json.dump(credenciales, f)
@@ -84,6 +90,7 @@ def manejar_cliente_tcp(sock_ssl, direccion):
         if opcion == '2':
             sock_ssl.send("Ingresa tu nombre de usuario: ".encode())
             nombre = sock_ssl.recv(1024).decode().strip()
+         #Validaciones de nombre
             if not nombre.isalnum() or len(nombre) < 3:
                 sock_ssl.send("Nombre inválido: solo alfanuméricos (mínimo 3 caracteres). Conexión terminada.".encode())
                 sock_ssl.close()
@@ -105,16 +112,16 @@ def manejar_cliente_tcp(sock_ssl, direccion):
                 sock_ssl.send("La contraseña debe tener al menos 4 caracteres. Conexión terminada.".encode())
                 sock_ssl.close()
                 return
-
+        #genera el hash de la contraseña
             contraseña_bytes = contraseña.encode('utf-8')
             hash_contraseña = bcrypt.hashpw(contraseña_bytes, bcrypt.gensalt()).decode('utf-8')
-
+        #guarda las credencias del usuario
             credenciales[nombre] = hash_contraseña
             guardar_credenciales()
             logger.info(f"Nuevo usuario registrado: {nombre}")
 
             sock_ssl.send(f"Registro exitoso, ¡Bienvenido {nombre}!\n".encode())
-
+        #Login
         elif opcion == '1':
             sock_ssl.send("Ingresa tu nombre de usuario: ".encode())
             nombre = sock_ssl.recv(1024).decode().strip()
@@ -128,7 +135,7 @@ def manejar_cliente_tcp(sock_ssl, direccion):
                 sock_ssl.send("Usuario no encontrado. Conexión terminada.".encode())
                 sock_ssl.close()
                 return
-
+  #Verificacion de contraseña correcta
             sock_ssl.send("Ingresa tu contraseña: ".encode())
             contraseña = sock_ssl.recv(1024).decode().strip()
 
@@ -149,7 +156,7 @@ def manejar_cliente_tcp(sock_ssl, direccion):
             sock_ssl.close()
             logger.warning(f"Conexión de {direccion} terminó por opción inválida.")
             return
-
+       #Seccion de Sesion activa
         clientes_tcp[nombre] = (sock_ssl, direccion)
         logger.info(f"Usuario {nombre} conectado desde {direccion}")
         print(f"[{obtener_fecha_hora()}] {nombre} (TCP) conectado desde {direccion}")
@@ -162,14 +169,15 @@ def manejar_cliente_tcp(sock_ssl, direccion):
                 break
             if mensaje == "__salir__":
                 break
-
+                
+          #Mensaje privado
             if mensaje.startswith('@'):
                 partes = mensaje.split(' ', 1)
                 if len(partes) == 2:
                     destino, contenido = partes
-                    destino = destino[1:]
+                    destino = destino[1:] #Quitar el '@'
                     mensaje_privado = f"[{obtener_fecha_hora()}] [Privado] {nombre}: {contenido}\n"
-
+    #Busca el socket del destinatario
                     if destino in clientes_tcp:
                         clientes_tcp[destino][0].sendall(mensaje_privado.encode())
                         sock_ssl.send(f"Mensaje privado enviado a {destino}.\n".encode())
@@ -180,6 +188,7 @@ def manejar_cliente_tcp(sock_ssl, direccion):
                 else:
                     sock_ssl.send("Formato incorrecto. Usa: @usuario mensaje\n".encode())
                     logger.warning(f"Mensaje de {nombre} con formato privado incorrecto.")
+     #Mensaje publico
             else:
                 mensaje_completo = f"[{obtener_fecha_hora()}] {nombre}: {mensaje}\n"
                 logger.info(f"Mensaje PUBLICO de {nombre}: {mensaje}")
@@ -192,6 +201,7 @@ def manejar_cliente_tcp(sock_ssl, direccion):
     except Exception as e:
         logger.error(f"Error en manejo de cliente {direccion}: {e}")
     finally:
+        # Limpia la desconectar
         if nombre in clientes_tcp:
             del clientes_tcp[nombre]
             logger.info(f"Usuario {nombre} desconectado.")
@@ -205,18 +215,20 @@ def manejar_cliente_tcp(sock_ssl, direccion):
 
 
 def servidor_tcp():
-    """Este metodo es el que inicia el servidor en TCP"""
+    """Inicializa el socket del servidor TCP, carga certificados y espera conexiones entrantes."""
     cargar_credenciales()
+    #Se configura el contexto SSL para el lado del servidor
     contexto_ssl = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     contexto_ssl.set_ciphers('DEFAULT')
 
     try:
+        #Carga el par de claves Certificado y llave privada
         contexto_ssl.load_cert_chain(certfile="server.pem", keyfile="server.pem")
     except FileNotFoundError:
         print("¡ERROR! No se encontró el archivo 'server.pem'. Por favor, generarlo con OpenSSL.")
         logger.critical("No se encontró el archivo 'server.pem'. Servidor no iniciado.")
         return
-
+   #Creacion del socket TPC
     server_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
@@ -229,10 +241,10 @@ def servidor_tcp():
 
     print(f"[TCP] Escuchando en {IP}:{PUERTO}")
     logger.info(f"Servidor TCP iniciado en {IP}:{PUERTO}. Máx clientes: {MAX_CLIENTES}")
-
+ #Bucle para aceptar las conexiones.
     while True:
         sock, addr = server_tcp.accept()
-
+     #Control de capacidad maxima.
         if len(clientes_tcp) >= MAX_CLIENTES:
             try:
                 sock_ssl_temp = contexto_ssl.wrap_socket(sock, server_side=True)
@@ -244,7 +256,9 @@ def servidor_tcp():
             continue
 
         try:
+            #Envuelve cada socket entrante (usuario) con SSL
             sock_ssl = contexto_ssl.wrap_socket(sock, server_side=True)
+            #delega la atencion del cliente a un hilo independiente
             hilo = threading.Thread(target=manejar_cliente_tcp, args=(sock_ssl, addr))
             hilo.daemon = True
             hilo.start()
@@ -273,7 +287,7 @@ def consola_servidor():
         if mensaje.lower() == 'salir':
             print("Servidor detenido.")
             logger.critical("Servidor finalizado por comando 'salir' en consola.")
-            exit(0)
+            exit(0) #Termina el programa
 
         if mensaje.startswith('@'):
             partes = mensaje.split(' ', 1)
@@ -296,6 +310,7 @@ def consola_servidor():
             else:
                 print("Formato incorrecto. Usa: @usuario mensaje")
         else:
+            #Broadcast del servidor
             mensaje_servidor = f"[{obtener_fecha_hora()}] Servidor: {mensaje}\n"
             enviar_a_todos(mensaje_servidor)
             logger.info(f"Servidor envió mensaje PUBLICO: {mensaje}")
@@ -306,9 +321,11 @@ def consola_servidor():
 # =======================
 
 if __name__ == "__main__":
+    # Hilo tcp: Escucha conexiones TCP entrantes
     hilo_tcp = threading.Thread(target=servidor_tcp)
+    # Hilo admin: Maneja la consola del administrador 
     hilo_admin = threading.Thread(target=consola_servidor)
-
+    #Asegura que si el hilo principal muere, estos tambien se cierren.
     hilo_tcp.daemon = True
     hilo_admin.daemon = True
 
@@ -318,8 +335,10 @@ if __name__ == "__main__":
     print("Servidor de chat listo. Esperando conexiones TCP/SSL")
 
     try:
+        # Mantiene el hilo vivo esperando señales
         while True:
             threading.Event().wait()
     except (KeyboardInterrupt, SystemExit):
 
         print("Servidor finalizado.")
+
