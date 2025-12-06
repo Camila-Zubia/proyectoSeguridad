@@ -9,10 +9,14 @@ import getpass
 # CONTIENE LA IP DEL SERVIDOR Y EL PUERTO ADEMAS DE QUE OBTIENE LA FECHA Y HORA DONDE SE MANDÓ EL MENSAJE
 # ===========================
 
-IP_SERVIDOR = 'localhost'
+IP_SERVIDOR = 'localhost' 
 PUERTO = 12345
 
 def obtener_fecha_hora():
+    """
+Retorna la fecha y hora actual formateada como un string.
+Se utiliza para logs o mensajes locales
+    """
     return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 # ===========================
@@ -22,7 +26,9 @@ def obtener_fecha_hora():
 
 def cliente_tcp():
     """Crea un contexto SSL seguro utilizando el archivo server.pem, lo que verifica el 
-       certificado del servidor"""
+       certificado del servidor
+       Realiza el handshake de autenticacion entre el login y el registro
+       Inicia un hilo para recibir mensajes y mantiene el hilo principal para enviarlos."""
     contexto_ssl = ssl.create_default_context()
     try:
         contexto_ssl.load_verify_locations(cafile="server.pem")
@@ -37,16 +43,21 @@ def cliente_tcp():
     cliente_normal = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     cliente = None
     try:
+        # Conexion TCP
         cliente_normal.connect((IP_SERVIDOR, PUERTO))
+        # Envuelve el socket TCP con SSL
         cliente = contexto_ssl.wrap_socket(cliente_normal, server_hostname=IP_SERVIDOR)
+        # El usuario Recibe el menu inicio
         prompt_opcion = cliente.recv(1024).decode()
         print(prompt_opcion, end='')
+        # El usuario Envia la opcion seleccionada
         opcion = input()
         cliente.send(opcion.encode())
 
         """Cuando el usuario se registre pero el servidor no de una respuesta exitosa, el cliente
            se va a desconectar"""
         if opcion == '1' or opcion == '2':
+            #Envia el nombre de usuario
             prompt_nombre = cliente.recv(1024).decode()
             print(prompt_nombre, end='')
             nombre = input()
@@ -57,15 +68,16 @@ def cliente_tcp():
             #print(prompt_pass, end='')
             #contraseña = input()
             #contraseña_sanitizada = contraseña.strip()
+            #Envia la contraseña
             prompt_pass_raw = cliente.recv(1024).decode()
             prompt_pass = prompt_pass_raw.strip()
             contraseña = getpass.getpass(prompt_pass + " ")
             contraseña_sanitizada = contraseña.strip()
             cliente.send(contraseña_sanitizada.encode())
-
+            #Recibe el resultado de la autenticacion
             respuesta_servidor = cliente.recv(1024).decode()
             print(respuesta_servidor)
-
+           #Si el servidor no confirma el exito cierra el cliente
             if not ("Bienvenido" in respuesta_servidor or "exitoso" in respuesta_servidor):
                 cliente.close()
                 return
@@ -133,6 +145,10 @@ def cliente_tcp():
 # ===========================
 
 def main():
+"""
+Menu principal donde se muestran las opciones.
+"""
+    
     while True:
         print("\n--- Menú de Cliente ---")
         print("1. Conectar al Chat")
