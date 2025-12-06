@@ -64,11 +64,6 @@ def cliente_tcp():
             nombre_sanitizado = nombre.strip()
             cliente.send(nombre_sanitizado.encode())
 
-            #prompt_pass = cliente.recv(1024).decode()
-            #print(prompt_pass, end='')
-            #contraseña = input()
-            #contraseña_sanitizada = contraseña.strip()
-            #Envia la contraseña
             prompt_pass_raw = cliente.recv(1024).decode()
             prompt_pass = prompt_pass_raw.strip()
             contraseña = getpass.getpass(prompt_pass + " ")
