@@ -21,6 +21,8 @@ def obtener_fecha_hora():
 # ===========================
 
 def cliente_tcp():
+    """Crea un contexto SSL seguro utilizando el archivo server.pem, lo que verifica el 
+       certificado del servidor"""
     contexto_ssl = ssl.create_default_context()
     try:
         contexto_ssl.load_verify_locations(cafile="server.pem")
@@ -29,6 +31,9 @@ def cliente_tcp():
         return
     contexto_ssl.check_hostname = False
     contexto_ssl.verify_mode = ssl.CERT_REQUIRED
+
+    """A partir de aqui se conecta al servidor creando el socket y lo convierte a
+       SSL con contexto_ssl.wrap_socket"""
     cliente_normal = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     cliente = None
     try:
@@ -39,6 +44,8 @@ def cliente_tcp():
         opcion = input()
         cliente.send(opcion.encode())
 
+        """Cuando el usuario se registre pero el servidor no de una respuesta exitosa, el cliente
+           se va a desconectar"""
         if opcion == '1' or opcion == '2':
             prompt_nombre = cliente.recv(1024).decode()
             print(prompt_nombre, end='')
@@ -69,6 +76,8 @@ def cliente_tcp():
             cliente.close()
             return
 
+        """Este metodo permite al cliente recibir los mensajes que vengan del servidor tanto de otros clientes
+           como del mismo servidor"""
         def recibir():
             while True:
                 try:
@@ -88,6 +97,8 @@ def cliente_tcp():
         hilo_recv.daemon = True
         hilo_recv.start()
 
+        """A partir de aqui están las lineas que permiten al cliente enviar mensajes en el servidor
+           Se sanitizan los mensajes eliminando espacios vacios no relevantes"""
         while True:
             mensaje_entrada = input()
             mensaje_sanitizado = mensaje_entrada.strip()
